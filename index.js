@@ -32,7 +32,7 @@ function getDefaultGeneratorModule (generatorName) {
 // ------------------- MAIN ----------------------
 const ERROR_PREFIX = 'POSTCSS_TYPED_CSS_CLASSES: '
 
-module.exports = postcss.plugin('postcss-typed-css-classes', opts => {
+module.exports = opts => {
   let gerneratorModule = validateAndReturnGeneratorModule(opts &&
     opts.generator)
   let {
@@ -53,27 +53,30 @@ module.exports = postcss.plugin('postcss-typed-css-classes', opts => {
   let validFilter = validateAndReturnFilter(filter)
   let validPurge = validateAndReturnPurge(purge)
 
-  return function (root) {
-    let parsedClasses =
-      validFilter ? getAndFilterParsedClassesWithFilter(root,
-        validFilter) : getAndFilterParsedClassesWithOpts(root,
-        escapeClassName, validOutputFilepath, validContent, validPurge, escape)
+  return {
+    postcssPlugin: 'postcss-typed-css-classes',
+    Once (root) {
+      let parsedClasses =
+        validFilter ? getAndFilterParsedClassesWithFilter(root,
+          validFilter) : getAndFilterParsedClassesWithOpts(root,
+          escapeClassName, validOutputFilepath, validContent, validPurge, escape)
 
-    let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
-    let generatedCode = generator(aggregatedParsedClasses)
+      let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
+      let generatedCode = generator(aggregatedParsedClasses)
 
-    if (typeof generatedCode === 'string') {
-      // NOTE: there are *Sync functions because of simplicity in es5
-      if (fs.existsSync(validOutputFilepath)) {
-        let oldGeneratedCode = fs.readFileSync(validOutputFilepath, 'utf8')
-        if (oldGeneratedCode === generatedCode) {
-          return
+      if (typeof generatedCode === 'string') {
+        // NOTE: there are *Sync functions because of simplicity in es5
+        if (fs.existsSync(validOutputFilepath)) {
+          let oldGeneratedCode = fs.readFileSync(validOutputFilepath, 'utf8')
+          if (oldGeneratedCode === generatedCode) {
+            return
+          }
         }
+        fs.writeFileSync(validOutputFilepath, generatedCode)
       }
-      fs.writeFileSync(validOutputFilepath, generatedCode)
     }
   }
-})
+}
 // ------------------ //MAIN ------------------------
 
 // ------------------- VALIDATORS ----------------------
@@ -504,3 +507,5 @@ function getClassNamesFromRule (rule) {
   return classNames
 }
 // ------------------ //HELPERS ------------------------
+
+module.exports.postcss = true
