@@ -1,4 +1,3 @@
-const postcss = require('postcss')
 const fs = require('fs')
 const selectorParser = require('postcss-selector-parser')
 const fg = require('fast-glob')
@@ -21,8 +20,8 @@ function getDefaultGeneratorModule (generatorName) {
     case 'json':
       return jsonGeneratorModule
     default:
-      throw new Error(ERROR_PREFIX +
-        'default generator ' + generatorName + ' doesn\'t exist!'
+      throw new Error(
+        ERROR_PREFIX + 'default generator ' + generatorName + " doesn't exist!"
       )
   }
 }
@@ -33,8 +32,9 @@ function getDefaultGeneratorModule (generatorName) {
 const ERROR_PREFIX = 'POSTCSS_TYPED_CSS_CLASSES: '
 
 module.exports = opts => {
-  let gerneratorModule = validateAndReturnGeneratorModule(opts &&
-    opts.generator)
+  let gerneratorModule = validateAndReturnGeneratorModule(
+    opts && opts.generator
+  )
   let {
     generate: generator,
     escapeClassName = className => className,
@@ -45,21 +45,29 @@ module.exports = opts => {
     purge = false
   } = Object.assign(gerneratorModule, opts || {})
 
-  let validOutputFilepath =
-    validateAndReturnOutputFilepath(outputFilePath || defaults.output_filepath)
-  let validContent =
-    validateAndReturnContent(content || defaults.content,
-      defaults.content && defaults.content[0])
+  let validOutputFilepath = validateAndReturnOutputFilepath(
+    outputFilePath || defaults.output_filepath
+  )
+  let validContent = validateAndReturnContent(
+    content || defaults.content,
+    defaults.content && defaults.content[0]
+  )
   let validFilter = validateAndReturnFilter(filter)
   let validPurge = validateAndReturnPurge(purge)
 
   return {
     postcssPlugin: 'postcss-typed-css-classes',
     Once (root) {
-      let parsedClasses =
-        validFilter ? getAndFilterParsedClassesWithFilter(root,
-          validFilter) : getAndFilterParsedClassesWithOpts(root,
-          escapeClassName, validOutputFilepath, validContent, validPurge, escape)
+      let parsedClasses = validFilter
+        ? getAndFilterParsedClassesWithFilter(root, validFilter)
+        : getAndFilterParsedClassesWithOpts(
+            root,
+            escapeClassName,
+            validOutputFilepath,
+            validContent,
+            validPurge,
+            escape
+          )
 
       let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
       let generatedCode = generator(aggregatedParsedClasses)
@@ -134,9 +142,7 @@ function validateAndReturnFilter (filter) {
   if (typeof filter === 'function') {
     return filter
   } else {
-    throw new Error(
-      ERROR_PREFIX + 'opts.filter has to be function!'
-    )
+    throw new Error(ERROR_PREFIX + 'opts.filter has to be function!')
   }
 }
 
@@ -207,9 +213,7 @@ function validateAndReturnContent (content, defaultContent = {}) {
       )
     })
   }
-  throw new Error(
-    ERROR_PREFIX + 'opts.content needs to be a string or array!'
-  )
+  throw new Error(ERROR_PREFIX + 'opts.content needs to be a string or array!')
 }
 // ------------------- //VALIDATORS ----------------------
 
@@ -253,9 +257,10 @@ function getAndFilterParsedClassesWithFilter (root, filter) {
           rule.remove()
         } else {
           // just remove the class selector
-          let regex = RegExp(`\\b${ class_.name }\\b`)
-          let selectors = rule.selectors
-            .filter(selector => !regex.test(selector))
+          let regex = RegExp(`\\b${class_.name}\\b`)
+          let selectors = rule.selectors.filter(
+            selector => !regex.test(selector)
+          )
           if (selectors.length === 0) {
             rule.remove()
           } else {
@@ -299,8 +304,14 @@ function getAndFilterParsedClassesWithFilter (root, filter) {
 * @param {boolean} escape from opts
 * @returns {array} parsedClasses
 */
-function getAndFilterParsedClassesWithOpts (root, escapeClassName,
-  outputFilepath, content, purge, escape) {
+function getAndFilterParsedClassesWithOpts (
+  root,
+  escapeClassName,
+  outputFilepath,
+  content,
+  purge,
+  escape
+) {
   let parsedClasses = []
   let usedCssClasses = new Set()
   if (purge) {
@@ -314,10 +325,11 @@ function getAndFilterParsedClassesWithOpts (root, escapeClassName,
 
         usedCssClassesInFile
           // remove prefix `C.`
-          .map(mapper).flat()
+          .map(mapper)
+          .flat()
           // add class to set
-          .forEach(class_ => usedCssClasses.add(
-            escape ? escapeClassName(class_) : class_)
+          .forEach(class_ =>
+            usedCssClasses.add(escape ? escapeClassName(class_) : class_)
           )
       })
     })
@@ -331,9 +343,10 @@ function getAndFilterParsedClassesWithOpts (root, escapeClassName,
       parsedClassesFromRule.forEach(class_ => {
         if (!usedCssClasses.has(escapeClassName(class_.name))) {
           // just remove the class selector
-          let regex = RegExp(`\\b${ class_.name }\\b`)
-          let selectors = rule.selectors
-            .filter(selector => !regex.test(selector))
+          let regex = RegExp(`\\b${class_.name}\\b`)
+          let selectors = rule.selectors.filter(
+            selector => !regex.test(selector)
+          )
           if (selectors.length === 0) {
             rule.remove()
           } else {
@@ -347,8 +360,11 @@ function getAndFilterParsedClassesWithOpts (root, escapeClassName,
   if (purge) {
     root.walkAtRules(atRule => {
       let { nodes, params } = atRule
-      if ((nodes && !nodes.length) ||
-        (!nodes && !params) || (!params && !nodes.length)) {
+      if (
+        (nodes && !nodes.length) ||
+        (!nodes && !params) ||
+        (!params && !nodes.length)
+      ) {
         atRule.remove()
       }
     })
@@ -429,7 +445,8 @@ function aggregateParsedClasses (parsedClasses) {
  * @returns {number | null} index
  */
 function findAggregatedParsedClassIndex (
-  aggregatedParsedClasses, parsedClassName
+  aggregatedParsedClasses,
+  parsedClassName
 ) {
   for (let [i, element] of aggregatedParsedClasses.entries()) {
     if (element.name === parsedClassName) {
