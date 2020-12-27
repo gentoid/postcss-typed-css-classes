@@ -81,17 +81,61 @@ module.exports = opts => {
   } else {
     return {
       postcssPlugin,
-      Once (root) {
-        let parsedClasses = getAndFilterParsedClassesWithOpts(
-          root,
-          escapeClassName,
-          validOutputFilepath,
-          validContent,
-          validPurge,
-          escape
-        )
-
-        writeToFile(parsedClasses, generator, validOutputFilepath)
+      prepare () {
+        let parsedClasses = []
+        let usedCssClasses = []
+        return {
+          Once (root) {
+            let tmp = getAndFilterParsedClassesWithOpts(
+              root,
+              escapeClassName,
+              validOutputFilepath,
+              validContent,
+              validPurge,
+              escape
+            )
+            parsedClasses = tmp.parsedClasses
+            usedCssClasses = tmp.usedCssClasses
+          },
+          Rule (rule) {
+            let parsedClassesFromRule = getParsedClassesFromRule(rule)
+            Array.prototype.push.apply(parsedClasses, parsedClassesFromRule)
+            // rule.remove()
+            if (purge) {
+              // filter classes for css output
+              parsedClassesFromRule.forEach(class_ => {
+                if (!usedCssClasses.has(escapeClassName(class_.name))) {
+                  // just remove the class selector
+                  let regex = RegExp(`\\b${class_.name}\\b`)
+                  let selectors = rule.selectors.filter(
+                    selector => !regex.test(selector)
+                  )
+                  if (selectors.length === 0) {
+                    rule.remove()
+                  } else {
+                    rule.selector = selectors.join(',')
+                  }
+                }
+              })
+            }
+          },
+          AtRule (atRule) {
+            // remove empty atRules
+            if (purge) {
+              let { nodes, params } = atRule
+              if (
+                (nodes && !nodes.length) ||
+                (!nodes && !params) ||
+                (!params && !nodes.length)
+              ) {
+                atRule.remove()
+              }
+            }
+          },
+          OnceExit () {
+            writeToFile(parsedClasses, generator, validOutputFilepath)
+          }
+        }
       }
     }
   }
@@ -352,43 +396,8 @@ function getAndFilterParsedClassesWithOpts (
       })
     })
   }
-  root.walkRules(rule => {
-    let parsedClassesFromRule = getParsedClassesFromRule(rule)
-    Array.prototype.push.apply(parsedClasses, parsedClassesFromRule)
-    // rule.remove()
-    if (purge) {
-      // filter classes for css output
-      parsedClassesFromRule.forEach(class_ => {
-        if (!usedCssClasses.has(escapeClassName(class_.name))) {
-          // just remove the class selector
-          let regex = RegExp(`\\b${class_.name}\\b`)
-          let selectors = rule.selectors.filter(
-            selector => !regex.test(selector)
-          )
-          if (selectors.length === 0) {
-            rule.remove()
-          } else {
-            rule.selector = selectors.join(',')
-          }
-        }
-      })
-    }
-  })
-  // remove empty atRules
-  if (purge) {
-    root.walkAtRules(atRule => {
-      let { nodes, params } = atRule
-      if (
-        (nodes && !nodes.length) ||
-        (!nodes && !params) ||
-        (!params && !nodes.length)
-      ) {
-        atRule.remove()
-      }
-    })
-  }
 
-  return parsedClasses
+  return { parsedClasses, usedCssClasses }
 }
 
 /** Aggregate classes by name
