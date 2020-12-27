@@ -82,6 +82,8 @@ function escapeClassName (name) {
   name = name.replace(/:/g, '__')
   name = name.replace(/\//g, 'of')
   name = name.replace(/@/g, '_at_')
+  name = name.replace(/\./g, '_')
+  name = name.replace(/^(\d)/g, '_$1')
   if (getKeywords().includes(name)) {
     name += '_'
   }
