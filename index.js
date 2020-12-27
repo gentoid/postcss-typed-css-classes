@@ -1,6 +1,11 @@
 const fs = require('fs')
 const selectorParser = require('postcss-selector-parser')
 const fg = require('fast-glob')
+const util = require('util')
+
+const readFile = util.promisify(fs.readFile)
+const stat = util.promisify(fs.stat)
+const writeFile = util.promisify(fs.writeFile)
 
 // --------------- GENERATORS ------------------
 // can't lazyload because of preconfigured linters from PostCSS plugin template
@@ -72,8 +77,8 @@ module.exports = opts => {
               parsedClassesFromRule
             )
           },
-          OnceExit () {
-            writeToFile(parsedClasses, generator, validOutputFilepath)
+          OnceExit: async () => {
+            await writeToFile(parsedClasses, generator, validOutputFilepath)
           }
         }
       }
@@ -86,12 +91,12 @@ module.exports = opts => {
           parsedClasses,
           usedCssClasses
         } = getAndFilterParsedClassesWithOpts(
-              escapeClassName,
-              validOutputFilepath,
-              validContent,
-              validPurge,
-              escape
-            )
+          escapeClassName,
+          validOutputFilepath,
+          validContent,
+          validPurge,
+          escape
+        )
         return {
           Rule (rule) {
             let parsedClassesFromRule = getParsedClassesFromRule(rule)
@@ -128,8 +133,8 @@ module.exports = opts => {
               }
             }
           },
-          OnceExit () {
-            writeToFile(parsedClasses, generator, validOutputFilepath)
+          OnceExit: async () => {
+            await writeToFile(parsedClasses, generator, validOutputFilepath)
           }
         }
       }
@@ -138,19 +143,21 @@ module.exports = opts => {
 }
 // ------------------ //MAIN ------------------------
 
-function writeToFile (parsedClasses, generator, validOutputFilepath) {
+async function writeToFile (parsedClasses, generator, validOutputFilepath) {
   let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
   let generatedCode = generator(aggregatedParsedClasses)
 
   if (typeof generatedCode === 'string') {
-    // NOTE: there are *Sync functions because of simplicity in es5
-    if (fs.existsSync(validOutputFilepath)) {
-      let oldGeneratedCode = fs.readFileSync(validOutputFilepath, 'utf8')
+    try {
+      await stat(validOutputFilepath)
+      let oldGeneratedCode = await readFile(validOutputFilepath, 'utf8')
       if (oldGeneratedCode === generatedCode) {
         return
       }
+    } catch {
+      //do nothing
     }
-    fs.writeFileSync(validOutputFilepath, generatedCode)
+    await writeFile(validOutputFilepath, generatedCode)
   }
 }
 
