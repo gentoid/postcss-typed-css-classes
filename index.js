@@ -73,7 +73,7 @@ module.exports = opts => {
             )
           },
           OnceExit () {
-            processParsedClasses(parsedClasses, generator, validOutputFilepath)
+            writeToFile(parsedClasses, generator, validOutputFilepath)
           }
         }
       }
@@ -91,14 +91,14 @@ module.exports = opts => {
           escape
         )
 
-        processParsedClasses(parsedClasses, generator, validOutputFilepath)
+        writeToFile(parsedClasses, generator, validOutputFilepath)
       }
     }
   }
 }
 // ------------------ //MAIN ------------------------
 
-function processParsedClasses (parsedClasses, generator, validOutputFilepath) {
+function writeToFile (parsedClasses, generator, validOutputFilepath) {
   let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
   let generatedCode = generator(aggregatedParsedClasses)
 
