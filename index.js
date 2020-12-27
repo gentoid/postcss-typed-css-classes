@@ -54,38 +54,54 @@ module.exports = opts => {
   )
   let validFilter = validateAndReturnFilter(filter)
   let validPurge = validateAndReturnPurge(purge)
+  let postcssPlugin = 'postcss-typed-css-classes'
 
-  return {
-    postcssPlugin: 'postcss-typed-css-classes',
-    Once (root) {
-      let parsedClasses = validFilter
-        ? getAndFilterParsedClassesWithFilter(root, validFilter)
-        : getAndFilterParsedClassesWithOpts(
-            root,
-            escapeClassName,
-            validOutputFilepath,
-            validContent,
-            validPurge,
-            escape
-          )
+  if (validFilter) {
+    return {
+      postcssPlugin,
+      Once (root) {
+        processParsedClasses(
+          getAndFilterParsedClassesWithFilter(root, validFilter),
+          generator,
+          validOutputFilepath
+        )
+      }
+    }
+  } else {
+    return {
+      postcssPlugin,
+      Once (root) {
+        let parsedClasses = getAndFilterParsedClassesWithOpts(
+          root,
+          escapeClassName,
+          validOutputFilepath,
+          validContent,
+          validPurge,
+          escape
+        )
 
-      let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
-      let generatedCode = generator(aggregatedParsedClasses)
-
-      if (typeof generatedCode === 'string') {
-        // NOTE: there are *Sync functions because of simplicity in es5
-        if (fs.existsSync(validOutputFilepath)) {
-          let oldGeneratedCode = fs.readFileSync(validOutputFilepath, 'utf8')
-          if (oldGeneratedCode === generatedCode) {
-            return
-          }
-        }
-        fs.writeFileSync(validOutputFilepath, generatedCode)
+        processParsedClasses(parsedClasses, generator, validOutputFilepath)
       }
     }
   }
 }
 // ------------------ //MAIN ------------------------
+
+function processParsedClasses (parsedClasses, generator, validOutputFilepath) {
+  let aggregatedParsedClasses = aggregateParsedClasses(parsedClasses)
+  let generatedCode = generator(aggregatedParsedClasses)
+
+  if (typeof generatedCode === 'string') {
+    // NOTE: there are *Sync functions because of simplicity in es5
+    if (fs.existsSync(validOutputFilepath)) {
+      let oldGeneratedCode = fs.readFileSync(validOutputFilepath, 'utf8')
+      if (oldGeneratedCode === generatedCode) {
+        return
+      }
+    }
+    fs.writeFileSync(validOutputFilepath, generatedCode)
+  }
+}
 
 // ------------------- VALIDATORS ----------------------
 /** User has to set output_filepath in opts if no default
