@@ -82,21 +82,17 @@ module.exports = opts => {
     return {
       postcssPlugin,
       prepare () {
-        let parsedClasses = []
-        let usedCssClasses = []
-        return {
-          Once (root) {
-            let tmp = getAndFilterParsedClassesWithOpts(
-              root,
+        let {
+          parsedClasses,
+          usedCssClasses
+        } = getAndFilterParsedClassesWithOpts(
               escapeClassName,
               validOutputFilepath,
               validContent,
               validPurge,
               escape
             )
-            parsedClasses = tmp.parsedClasses
-            usedCssClasses = tmp.usedCssClasses
-          },
+        return {
           Rule (rule) {
             let parsedClassesFromRule = getParsedClassesFromRule(rule)
             Array.prototype.push.apply(parsedClasses, parsedClassesFromRule)
@@ -358,7 +354,6 @@ function getAndFilterParsedClassesWithFilter (rule, filter, classes) {
         ]
     }
 *
-* @param {postcss.Root} root css root
 * @param {function} escapeClassName function from module
 * @param {string} output_filepath from opts
 * @param {array} content from opts
@@ -367,7 +362,6 @@ function getAndFilterParsedClassesWithFilter (rule, filter, classes) {
 * @returns {array} parsedClasses
 */
 function getAndFilterParsedClassesWithOpts (
-  root,
   escapeClassName,
   outputFilepath,
   content,
