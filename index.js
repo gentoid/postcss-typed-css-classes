@@ -59,12 +59,23 @@ module.exports = opts => {
   if (validFilter) {
     return {
       postcssPlugin,
-      Once (root) {
-        processParsedClasses(
-          getAndFilterParsedClassesWithFilter(root, validFilter),
-          generator,
-          validOutputFilepath
-        )
+      prepare (/* result */) {
+        let parsedClasses = []
+        return {
+          Rule (rule) {
+            let parsedClassesFromRule = getParsedClassesFromRule(rule)
+            Array.prototype.push.apply(parsedClasses, parsedClassesFromRule)
+
+            getAndFilterParsedClassesWithFilter(
+              rule,
+              validFilter,
+              parsedClassesFromRule
+            )
+          },
+          OnceExit () {
+            processParsedClasses(parsedClasses, generator, validOutputFilepath)
+          }
+        }
       }
     }
   } else {
@@ -256,37 +267,28 @@ function validateAndReturnContent (content, defaultContent = {}) {
         ]
     }
  *
- * @param {postcss.Root} root css root
+ * @param {postcss.Root} rule css rule
  * @param {function} filter filter function
- * @returns {array} parsedClasses
+ * @param {array} classes css classes
  */
-function getAndFilterParsedClassesWithFilter (root, filter) {
-  let parsedClasses = []
-  root.walkRules(rule => {
-    let parsedClassesFromRule = getParsedClassesFromRule(rule)
-    Array.prototype.push.apply(parsedClasses, parsedClassesFromRule)
-
-    // filter classes for css output
-    parsedClassesFromRule.forEach(class_ => {
-      if (!filter(class_.name)) {
-        if (rule.selectors.length < 2) {
+function getAndFilterParsedClassesWithFilter (rule, filter, classes) {
+  // filter classes for css output
+  classes.forEach(class_ => {
+    if (!filter(class_.name)) {
+      if (rule.selectors.length < 2) {
+        rule.remove()
+      } else {
+        // just remove the class selector
+        let regex = RegExp(`\\b${class_.name}\\b`)
+        let selectors = rule.selectors.filter(selector => !regex.test(selector))
+        if (selectors.length === 0) {
           rule.remove()
         } else {
-          // just remove the class selector
-          let regex = RegExp(`\\b${class_.name}\\b`)
-          let selectors = rule.selectors.filter(
-            selector => !regex.test(selector)
-          )
-          if (selectors.length === 0) {
-            rule.remove()
-          } else {
-            rule.selector = selectors.join(',')
-          }
+          rule.selector = selectors.join(',')
         }
       }
-    })
+    }
   })
-  return parsedClasses
 }
 
 /** Get classes and their metadata from css file, start from PostCSS root
